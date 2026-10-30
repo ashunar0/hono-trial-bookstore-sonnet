@@ -18,3 +18,9 @@ QUESTION: 定額クーポンが小計より大きいとき → 条件の金額 >
 QUESTION: COUPON_NOT_APPLICABLE の details の形 → { reason: not_found | stopped | not_started | ended | below_minimum }
 QUESTION: 止めたクーポンをもう一度止める → 失敗にせず最初に止めた日時のまま 200
 QUESTION: クーポンの一覧にもページ分け（新しい順）を付けた
+QUESTION: 設計書のドメイン表は「cart は book・pricing を読む」だが、docs/domains.md は「複数ドメインを読むだけで書かない読みは route で組む」 → 見積もりは src/routes/cart/_read.ts で cart の queries・book の queries・pricing の rules を組み立てた。cart ドメインは pricing を import しない（book も使うのは setCartItem の「本があるか」だけ）
+QUESTION: カートの本の数に上限があるか → 無し（在庫は確定のときに見る）
+QUESTION: 見積もりに使う値段は → カートを見た時点の本の現在の値段（カートには値段を写さない）
+QUESTION: カートの DELETE の返り値 → hono-kit の決まり（delete は { ok: true }）に従った。PUT は GET と同じ形のカートを返す
+QUESTION: ?coupon= のコードが無いとき → COUPON_NOT_APPLICABLE（details.reason = not_found）の 422
+QUESTION: 店の人がカートを触ろうとしたら → 権限表は「客」だけなので requireRole("customer") で 403

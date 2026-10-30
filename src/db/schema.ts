@@ -178,3 +178,18 @@ export const couponUsesTable = sqliteTable(
     check("coupon_uses_status", sql`${t.status} in ('used', 'released')`),
   ],
 );
+
+// ── cart ──────────────────────────────────────────────────────────────────
+
+export const cartItemsTable = sqliteTable(
+  "cart_items",
+  {
+    customerId: text("customer_id").notNull(),
+    bookId: text("book_id").notNull(),
+    quantity: integer("quantity").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.customerId, t.bookId] }),
+    check("cart_items_quantity_positive", sql`${t.quantity} > 0`),
+  ],
+);
