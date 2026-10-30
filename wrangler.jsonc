@@ -9,6 +9,7 @@
     "BETTER_AUTH_SECRET": "local-dev-secret-change-me-in-production-0123456789",
     "BETTER_AUTH_URL": "http://localhost:8787",
   },
+  "triggers": { "crons": ["*/15 * * * *"] },
   "d1_databases": [
     {
       "binding": "DB",

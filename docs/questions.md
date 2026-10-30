@@ -37,3 +37,8 @@ QUESTION: 他人の注文をキャンセル・支払おうとしたら → 404�
 QUESTION: キャンセルで version が合わないとき → ORDER_STATUS_CONFLICT（details.status は読み直した今の状態）。客が送る version はキャンセルだけ（設計書どおり）
 QUESTION: 発送済みの注文を店の人がキャンセルしようとしたら → 409（発送前だけ）
 QUESTION: 注文の行・カートの並びを何で決めるか → 割り振りの端数を受ける「最後の行」を決めるため、カートに入れた順（rowid）を注文の行の順にした
+QUESTION: cron を 1 本にするか分けるか → 注文のキャンセル系（支払い期限切れ・確定中で止まった・戻しが止まった）は src/crons/sweepOrders.ts の 1 本。返品の在庫戻しは別の src/crons/restockReturns.ts。どちらも 15 分ごと（wrangler.jsonc の triggers.crons は同じ式 1 つ）
+QUESTION: 1 回に拾う 100 件は「各」種類ごと → 支払い期限切れ・確定中・戻し漏れそれぞれ 100 件まで
+QUESTION: 期限切れの判定 → paymentDueAt < now（ちょうど期限の時刻はまだ払える）。確定中の 10 分は createdAt < now - 10分
+QUESTION: 「キャンセル済みで戻し終えた日時が空」を拾うときに、いま客が押したキャンセルが戻す途中でも拾う → 戻す段は何度呼んでも同じ結果なので害は無いとして grace は置かなかった
+QUESTION: cron が 1 件失敗したとき → 他の注文は続け、最後に最初の失敗を throw（Workers が失敗として記録する）
