@@ -5,6 +5,7 @@
 import { sql } from "drizzle-orm";
 import {
   check,
+  index,
   integer,
   primaryKey,
   sqliteTable,
@@ -192,4 +193,111 @@ export const cartItemsTable = sqliteTable(
     primaryKey({ columns: [t.customerId, t.bookId] }),
     check("cart_items_quantity_positive", sql`${t.quantity} > 0`),
   ],
+);
+
+// ── order ─────────────────────────────────────────────────────────────────
+
+export const ordersTable = sqliteTable(
+  "orders",
+  {
+    id: text("id").primaryKey(),
+    customerId: text("customer_id").notNull(),
+    status: text("status", {
+      enum: ["placing", "awaiting_payment", "paid", "shipped", "cancelled"],
+    }).notNull(),
+    subtotal: integer("subtotal").notNull(),
+    discount: integer("discount").notNull(),
+    shippingFee: integer("shipping_fee").notNull(),
+    total: integer("total").notNull(),
+    tax: integer("tax").notNull(),
+    /** Other domains' ids are values only. couponCode is the code as it was when ordered, for showing */
+    couponId: text("coupon_id"),
+    couponCode: text("coupon_code"),
+    /** Made before anything is held, and passed to inventory / coupon to hold, use and give back */
+    couponUseId: text("coupon_use_id"),
+    reservationId: text("reservation_id").notNull(),
+    paymentDueAt: integer("payment_due_at", { mode: "timestamp_ms" }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    paidAt: integer("paid_at", { mode: "timestamp_ms" }),
+    shippedAt: integer("shipped_at", { mode: "timestamp_ms" }),
+    cancelledAt: integer("cancelled_at", { mode: "timestamp_ms" }),
+    /** When the stock and the coupon were given back after a cancel */
+    restoredAt: integer("restored_at", { mode: "timestamp_ms" }),
+    version: integer("version").notNull(),
+  },
+  (t) => [
+    check(
+      "orders_status",
+      sql`${t.status} in ('placing', 'awaiting_payment', 'paid', 'shipped', 'cancelled')`,
+    ),
+    index("orders_customer").on(t.customerId, t.createdAt),
+    index("orders_status").on(t.status, t.createdAt),
+  ],
+);
+
+export const orderLinesTable = sqliteTable(
+  "order_lines",
+  {
+    id: text("id").primaryKey(),
+    orderId: text("order_id").notNull(),
+    bookId: text("book_id").notNull(),
+    /** Title and price as they were when ordered */
+    title: text("title").notNull(),
+    unitPrice: integer("unit_price").notNull(),
+    quantity: integer("quantity").notNull(),
+    /** The coupon's discount allotted to this line */
+    discount: integer("discount").notNull(),
+  },
+  (t) => [
+    check("order_lines_quantity_positive", sql`${t.quantity} > 0`),
+    index("order_lines_order").on(t.orderId),
+  ],
+);
+
+export const returnsTable = sqliteTable(
+  "returns",
+  {
+    id: text("id").primaryKey(),
+    orderId: text("order_id").notNull(),
+    status: text("status", { enum: ["requested", "completed", "rejected"] }).notNull(),
+    rejectReason: text("reject_reason"),
+    requestedAt: integer("requested_at", { mode: "timestamp_ms" }).notNull(),
+    completedAt: integer("completed_at", { mode: "timestamp_ms" }),
+    rejectedAt: integer("rejected_at", { mode: "timestamp_ms" }),
+    /** When the books went back on the shelf */
+    restockedAt: integer("restocked_at", { mode: "timestamp_ms" }),
+    version: integer("version").notNull(),
+  },
+  (t) => [
+    check("returns_status", sql`${t.status} in ('requested', 'completed', 'rejected')`),
+    index("returns_order").on(t.orderId),
+    index("returns_status").on(t.status, t.requestedAt),
+  ],
+);
+
+export const returnLinesTable = sqliteTable(
+  "return_lines",
+  {
+    returnId: text("return_id").notNull(),
+    orderLineId: text("order_line_id").notNull(),
+    quantity: integer("quantity").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.returnId, t.orderLineId] }),
+    check("return_lines_quantity_positive", sql`${t.quantity} > 0`),
+  ],
+);
+
+export const refundsTable = sqliteTable(
+  "refunds",
+  {
+    id: text("id").primaryKey(),
+    orderId: text("order_id").notNull(),
+    /** Null for the refund of a cancel */
+    returnId: text("return_id"),
+    amount: integer("amount").notNull(),
+    tax: integer("tax").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [uniqueIndex("refunds_return").on(t.returnId), index("refunds_order").on(t.orderId)],
 );

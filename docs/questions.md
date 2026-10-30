@@ -24,3 +24,10 @@ QUESTION: 見積もりに使う値段は → カートを見た時点の本の�
 QUESTION: カートの DELETE の返り値 → hono-kit の決まり（delete は { ok: true }）に従った。PUT は GET と同じ形のカートを返す
 QUESTION: ?coupon= のコードが無いとき → COUPON_NOT_APPLICABLE（details.reason = not_found）の 422
 QUESTION: 店の人がカートを触ろうとしたら → 権限表は「客」だけなので requireRole("customer") で 403
+QUESTION: 確定の途中で在庫不足・クーポン使用済みになったとき「1 の注文を取り消す」の意味 → 取り消した注文が「キャンセル済み」として一覧に残ると、失敗した試みで客の一覧が汚れる。まだ何も約束していないので、押さえ・使用を戻したあと注文と行を消す（途中で落ちたら確定中のまま残るので cron が10分後にキャンセルする）
+QUESTION: orders にクーポンのコード（couponCode）を写すか → レスポンスに couponCode があり、coupon の表は order が読めない（ルール4）ので、注文の時点の写しとして orders に couponCode 列を足した
+QUESTION: 注文のレスポンスに customerId を載せるか → 設計書の例に無いが、店の人が全部の注文を見るので載せた
+QUESTION: 支払い期限は確定中に作る注文の時点（now + 3 日）で決め、支払い待ちへの切り替えで動かさない
+QUESTION: 注文の一覧の ?status= に placing を許すか → 確定中は誰にも見せないので受けない（400）
+QUESTION: 確定の「4. 支払い待ちにする（version で見る）」→ 注文は version 1 で作り、切り替えは updateWithVersion(version 1)。cron に先にキャンセルされていれば行が返らず、押さえ・使用を自分で戻して ORDER_STATUS_CONFLICT（details.status は読み直した今の状態）
+QUESTION: 在庫の押さえ・クーポンの使用を呼ぶ順 → 設計書の確定の段の順（在庫→クーポン）どおり。確認の順（COUPON_NOT_APPLICABLE→OUT_OF_STOCK→COUPON_ALREADY_USED）と同じ

@@ -36,6 +36,13 @@
       "when": 1793368267537,
       "tag": "0004_bent_cable",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1793368385481,
+      "tag": "0005_clever_vin_gonzales",
+      "breakpoints": true
     }
   ]
 }
