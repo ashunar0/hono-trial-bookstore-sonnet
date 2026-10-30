@@ -10,7 +10,7 @@
     "postinstall": "hnk prepare",
     "dev": "wrangler dev",
     "typecheck": "tsc --noEmit",
-    "lint": "oxlint .",
+    "lint": "oxlint --type-aware .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
@@ -19,8 +19,8 @@
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",
-    "hono-kit": "^0.17.0",
     "hono": "^4.13.1",
+    "hono-kit": "^0.17.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -28,6 +28,7 @@
     "@cloudflare/workers-types": "^5.20260813.1",
     "drizzle-kit": "^0.31.11",
     "oxlint": "^1.80.0",
+    "oxlint-tsgolint": "^7.0.2005",
     "prettier": "^3.9.6",
     "typescript": "^7.0.2",
     "vitest": "^4.1.11",

@@ -2,6 +2,7 @@
 
 This is a backend built on [hono-kit](https://github.com/ashunar0/hono-kit): Hono + Cloudflare Workers + D1 + Drizzle + Standard Schema (zod).
 The rules ship with the installed hono-kit. **Before writing any file, read `node_modules/hono-kit/docs/index.md`**, then the page for what you are doing.
+The business rules live in `src/domains/`: read [docs/domains.md](docs/domains.md) before touching them.
 
 ## Commands
 

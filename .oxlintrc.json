@@ -1,5 +1,14 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "extends": ["./node_modules/hono-kit/lint/recommended.json"],
-  "rules": {}
+  "rules": {
+    "typescript/no-floating-promises": [
+      "error",
+      {
+        "checkThenables": true
+      }
+    ],
+    "domains/imports": "error"
+  },
+  "jsPlugins": ["./lint/domains.mjs"]
 }
