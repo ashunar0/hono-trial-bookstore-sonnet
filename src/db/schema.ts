@@ -3,7 +3,7 @@
  * Each domain's tables sit under a heading of their own, so the owner shows
  */
 import { sql } from "drizzle-orm";
-import { check, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { check, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 // ── auth (Better Auth's tables; user has a role) ──────────────────────────
 
@@ -77,4 +77,53 @@ export const booksTable = sqliteTable(
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
   },
   (t) => [check("books_price_positive", sql`${t.price} > 0`)],
+);
+
+// ── inventory ─────────────────────────────────────────────────────────────
+
+/** A book with no row has 0 in stock. Every statement that changes stock also counts version up */
+export const stocksTable = sqliteTable(
+  "stocks",
+  {
+    bookId: text("book_id").primaryKey(),
+    stock: integer("stock").notNull(),
+    version: integer("version").notNull(),
+  },
+  (t) => [check("stocks_stock_not_negative", sql`${t.stock} >= 0`)],
+);
+
+export const reservationsTable = sqliteTable(
+  "reservations",
+  {
+    id: text("id").primaryKey(),
+    status: text("status", { enum: ["reserved", "released"] }).notNull(),
+  },
+  (t) => [check("reservations_status", sql`${t.status} in ('reserved', 'released')`)],
+);
+
+export const reservationLinesTable = sqliteTable(
+  "reservation_lines",
+  {
+    reservationId: text("reservation_id").notNull(),
+    bookId: text("book_id").notNull(),
+    quantity: integer("quantity").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.reservationId, t.bookId] }),
+    check("reservation_lines_quantity_positive", sql`${t.quantity} > 0`),
+  ],
+);
+
+/** One row per (return, book): a second restock of the same return hits the primary key */
+export const restocksTable = sqliteTable(
+  "restocks",
+  {
+    returnId: text("return_id").notNull(),
+    bookId: text("book_id").notNull(),
+    quantity: integer("quantity").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.returnId, t.bookId] }),
+    check("restocks_quantity_positive", sql`${t.quantity} > 0`),
+  ],
 );

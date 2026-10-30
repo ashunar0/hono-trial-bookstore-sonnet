@@ -9,7 +9,8 @@ import {
 import { requireRole } from "#/auth";
 import { listBooks, registerBook } from "#/domains/book/index";
 import { bookInputSchema } from "#/domains/book/rules";
-import { bookResponse, bookResponseSchema } from "./_response";
+import { readBook, withStock } from "./_read";
+import { bookResponseSchema } from "./_response";
 
 export const GET = createEndpoint(
   {
@@ -18,8 +19,10 @@ export const GET = createEndpoint(
     responses: { 200: pageResponseSchema(bookResponseSchema) },
   },
   async (c, reply) => {
-    const page = await listBooks(c.var.deps.db, c.req.valid("query"));
-    return reply.success(pageResponse(page, bookResponse));
+    const { db } = c.var.deps;
+    const page = await listBooks(db, c.req.valid("query"));
+    const items = await withStock(db, page.items);
+    return reply.success(pageResponse({ items, next: page.next }, (b) => b));
   },
 );
 
@@ -30,7 +33,10 @@ export const POST = createEndpoint(
     responses: { 200: bookResponseSchema, ...errorResponses() },
   },
   async (c, reply) => {
+    const { db } = c.var.deps;
     const book = await registerBook(c.var.deps, c.req.valid("json"), c.get("now"));
-    return reply.success(bookResponse(book));
+    const shown = await readBook(db, book.id);
+    if (shown === undefined) throw new Error("the book just registered is missing");
+    return reply.success(shown);
   },
 );
