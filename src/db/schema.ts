@@ -3,7 +3,7 @@
  * Each domain's tables sit under a heading of their own, so the owner shows
  */
 import { sql } from "drizzle-orm";
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { check, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 // ── auth (Better Auth's tables; user has a role) ──────────────────────────
 
@@ -63,3 +63,18 @@ export const verificationsTable = sqliteTable("verification", {
   createdAt: integer("created_at", { mode: "timestamp_ms" }),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }),
 });
+
+// ── book ──────────────────────────────────────────────────────────────────
+
+export const booksTable = sqliteTable(
+  "books",
+  {
+    id: text("id").primaryKey(),
+    title: text("title").notNull(),
+    author: text("author").notNull(),
+    price: integer("price").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [check("books_price_positive", sql`${t.price} > 0`)],
+);
