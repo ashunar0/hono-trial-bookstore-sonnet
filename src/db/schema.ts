@@ -3,7 +3,14 @@
  * Each domain's tables sit under a heading of their own, so the owner shows
  */
 import { sql } from "drizzle-orm";
-import { check, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+  check,
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 
 // ── auth (Better Auth's tables; user has a role) ──────────────────────────
 
@@ -125,5 +132,49 @@ export const restocksTable = sqliteTable(
   (t) => [
     primaryKey({ columns: [t.returnId, t.bookId] }),
     check("restocks_quantity_positive", sql`${t.quantity} > 0`),
+  ],
+);
+
+// ── coupon ────────────────────────────────────────────────────────────────
+
+export const couponsTable = sqliteTable(
+  "coupons",
+  {
+    id: text("id").primaryKey(),
+    code: text("code").notNull(),
+    type: text("type", { enum: ["fixed", "percent"] }).notNull(),
+    /** Yen off for fixed, percent off for percent */
+    value: integer("value").notNull(),
+    /** The subtotal of the books must reach this (0 for none) */
+    minAmount: integer("min_amount").notNull(),
+    startsAt: integer("starts_at", { mode: "timestamp_ms" }).notNull(),
+    endsAt: integer("ends_at", { mode: "timestamp_ms" }).notNull(),
+    stoppedAt: integer("stopped_at", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [
+    uniqueIndex("coupons_code").on(t.code),
+    check("coupons_type", sql`${t.type} in ('fixed', 'percent')`),
+    check(
+      "coupons_value",
+      sql`(${t.type} = 'fixed' and ${t.value} > 0 and ${t.minAmount} >= ${t.value}) or (${t.type} = 'percent' and ${t.value} between 1 and 100 and ${t.minAmount} >= 0)`,
+    ),
+  ],
+);
+
+export const couponUsesTable = sqliteTable(
+  "coupon_uses",
+  {
+    id: text("id").primaryKey(),
+    couponId: text("coupon_id").notNull(),
+    customerId: text("customer_id").notNull(),
+    status: text("status", { enum: ["used", "released"] }).notNull(),
+  },
+  (t) => [
+    // Only the uses still counted: a released one does not stop the next
+    uniqueIndex("coupon_uses_once_per_customer")
+      .on(t.couponId, t.customerId)
+      .where(sql`${t.status} = 'used'`),
+    check("coupon_uses_status", sql`${t.status} in ('used', 'released')`),
   ],
 );
