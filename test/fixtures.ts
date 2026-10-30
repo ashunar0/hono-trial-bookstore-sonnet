@@ -5,8 +5,25 @@ import { buildApp, makeDeps } from "#/main";
 
 export const db = () => wireDb(env.DB);
 
-export const alice: SessionUser = { id: "alice", name: "Alice", email: "alice@example.com" };
-export const bob: SessionUser = { id: "bob", name: "Bob", email: "bob@example.com" };
+export const alice: SessionUser = {
+  id: "alice",
+  name: "Alice",
+  email: "alice@example.com",
+  role: "customer",
+};
+export const bob: SessionUser = {
+  id: "bob",
+  name: "Bob",
+  email: "bob@example.com",
+  role: "customer",
+};
+/** A person of the shop */
+export const staff: SessionUser = {
+  id: "staff",
+  name: "Staff",
+  email: "staff@example.com",
+  role: "staff",
+};
 
 /**
  * A new user nobody else has used. The tests in a file share one D1, so a test that reads a list
@@ -14,7 +31,7 @@ export const bob: SessionUser = { id: "bob", name: "Bob", email: "bob@example.co
  */
 export const someone = (): SessionUser => {
   const id = crypto.randomUUID();
-  return { id, name: "Someone", email: `${id}@example.com` };
+  return { id, name: "Someone", email: `${id}@example.com`, role: "customer" };
 };
 
 /**

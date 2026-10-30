@@ -10,6 +10,8 @@ declare global {
 
   interface Env {
     DB: D1Database;
+    /** Better Auth's signing secret. wrangler.jsonc vars for local; a secret in production */
+    BETTER_AUTH_SECRET: string;
   }
 }
 
