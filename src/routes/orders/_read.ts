@@ -1,12 +1,13 @@
 import {
   findOrder,
   findOrderLines,
+  findReturn,
   findRefunds,
   findReturnLines,
   findReturnsOfOrders,
 } from "#/domains/order/index";
 import type { Db } from "#/db/index";
-import type { OrderResponse, ReturnResponse } from "./_response";
+import { returnResponse, type OrderResponse, type ReturnResponse } from "./_response";
 
 type OrderRow = NonNullable<Awaited<ReturnType<typeof findOrder>>>;
 
@@ -55,17 +56,7 @@ export const readOrders = async (db: Db, orders: OrderRow[]): Promise<OrderRespo
           })),
         returns: returns
           .filter((r) => r.orderId === o.id)
-          .map((r): ReturnResponse => ({
-            id: r.id,
-            orderId: r.orderId,
-            status: r.status,
-            rejectReason: r.rejectReason,
-            requestedAt: r.requestedAt.toISOString(),
-            completedAt: iso(r.completedAt),
-            lines: returnLines
-              .filter((l) => l.returnId === r.id)
-              .map((l) => ({ orderLineId: l.orderLineId, quantity: l.quantity })),
-          })),
+          .map((r) => returnResponse(r, returnLines)),
         refunds: refunds
           .filter((r) => r.orderId === o.id)
           .map((r) => ({ id: r.id, returnId: r.returnId, amount: r.amount, tax: r.tax })),
@@ -80,4 +71,11 @@ export const readOrder = async (db: Db, id: string): Promise<OrderResponse | und
   if (order === undefined) return undefined;
   const [shown] = await readOrders(db, [order]);
   return shown;
+};
+
+/** One return as the API shows it */
+export const readReturnOf = async (db: Db, id: string): Promise<ReturnResponse | undefined> => {
+  const ret = await findReturn(db, id);
+  if (ret === undefined) return undefined;
+  return returnResponse(ret, await findReturnLines(db, [id]));
 };

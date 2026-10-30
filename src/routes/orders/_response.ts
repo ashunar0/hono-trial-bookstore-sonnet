@@ -53,3 +53,28 @@ export const orderResponseSchema = z.object({
 });
 
 export type OrderResponse = z.infer<typeof orderResponseSchema>;
+
+type ReturnRow = {
+  id: string;
+  orderId: string;
+  status: "requested" | "completed" | "rejected";
+  rejectReason: string | null;
+  requestedAt: Date;
+  completedAt: Date | null;
+};
+
+/** A return as the API shows it. Orders and the returns list both show it, so it is made here */
+export const returnResponse = (
+  r: ReturnRow,
+  lines: { returnId: string; orderLineId: string; quantity: number }[],
+): ReturnResponse => ({
+  id: r.id,
+  orderId: r.orderId,
+  status: r.status,
+  rejectReason: r.rejectReason,
+  requestedAt: r.requestedAt.toISOString(),
+  completedAt: r.completedAt?.toISOString() ?? null,
+  lines: lines
+    .filter((l) => l.returnId === r.id)
+    .map((l) => ({ orderLineId: l.orderLineId, quantity: l.quantity })),
+});

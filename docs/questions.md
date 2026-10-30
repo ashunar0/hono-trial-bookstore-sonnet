@@ -42,3 +42,12 @@ QUESTION: 1 回に拾う 100 件は「各」種類ごと → 支払い期限切�
 QUESTION: 期限切れの判定 → paymentDueAt < now（ちょうど期限の時刻はまだ払える）。確定中の 10 分は createdAt < now - 10分
 QUESTION: 「キャンセル済みで戻し終えた日時が空」を拾うときに、いま客が押したキャンセルが戻す途中でも拾う → 戻す段は何度呼んでも同じ結果なので害は無いとして grace は置かなかった
 QUESTION: cron が 1 件失敗したとき → 他の注文は続け、最後に最初の失敗を throw（Workers が失敗として記録する）
+QUESTION: 返品の申請で確かめる順 → 400 → NOT_FOUND（他人・確定中の注文、注文に無い行）→ 発送済みか（409 ORDER_STATUS_CONFLICT）→ 発送から14日（422）→ 冊数（409）。期限は発送済みの注文にだけ意味があるので、未発送を先に見る（支払いの期限と同じ考え方）。14日目の同じ時刻ちょうどまでは受ける
+QUESTION: RETURN_QUANTITY_EXCEEDED の details → 注文の全部の行について { orderLineId, returnable }（「行ごとの返せる冊数」）
+QUESTION: 同じ申請の行に同じ行を2回入れる／冊数 0／行 0 本 → 400
+QUESTION: 同時に2つの申請が数え終えて両方通る穴 → 書いたあとにもう一度数え、発送した冊数を超えていれば自分の申請を取り下げて 409（両方が取り下げることはありうる）。D1 では条件つき INSERT の成否を batch の中で見られないため
+QUESTION: 返品の返金で「最後に返す冊」の判定 → 完了した返品の冊数（受け取り時点）だけで数える。申請中は数えない。受け取りが同時に走ると端数がずれうる（返金の id が返品 id 固定・返品の version で2回目は弾く）
+QUESTION: 受け取りの「完了にする」と「返金を記録」は同じドメインの1回の batch。返金の id は refund-<返品 id> 固定で、version の書き込みに負けた側の返金は主キーで無視される
+QUESTION: 返品の断る・受け取るの version は → 客からは送らない（サーバーが読んだ version）
+QUESTION: 返品の在庫戻しの cron は receiveReturn(caller=cron) を呼ぶ。店が完了済みの返品をもう一度受け取ろうとしたら、戻し漏れがあっても 409（cron だけが続きから）
+QUESTION: 返品の一覧 GET /returns も新しい申請順のページ分け。レスポンスの形は注文の中の returns と同じ（orders/_response.ts の returnResponse で作る）

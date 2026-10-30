@@ -1,7 +1,13 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { updateWithVersion } from "hono-kit/sqlite";
 import type { Db } from "#/db/index";
-import { orderLinesTable, ordersTable, refundsTable } from "#/db/schema";
+import {
+  orderLinesTable,
+  ordersTable,
+  refundsTable,
+  returnLinesTable,
+  returnsTable,
+} from "#/db/schema";
 
 type NewOrder = typeof ordersTable.$inferInsert;
 type NewLine = typeof orderLinesTable.$inferInsert;
@@ -33,3 +39,31 @@ export const deleteOrderLines = (db: Db, orderId: string) =>
 /** Records a refund. A refund with this id already there (the step ran before) is left as it is */
 export const insertRefund = (db: Db, refund: typeof refundsTable.$inferInsert) =>
   db.insert(refundsTable).values(refund).onConflictDoNothing();
+
+export const insertReturn = (db: Db, row: typeof returnsTable.$inferInsert) =>
+  db.insert(returnsTable).values(row);
+
+export const insertReturnLines = (db: Db, rows: (typeof returnLinesTable.$inferInsert)[]) =>
+  db.insert(returnLinesTable).values(rows);
+
+/** Takes back a request that turned out to be over what could be returned */
+export const deleteReturn = (db: Db, id: string) =>
+  db.delete(returnsTable).where(eq(returnsTable.id, id));
+
+export const deleteReturnLines = (db: Db, returnId: string) =>
+  db.delete(returnLinesTable).where(eq(returnLinesTable.returnId, returnId));
+
+/** Changes the return while its version is still the one read, counting it up */
+export const changeReturn = (
+  db: Db,
+  id: string,
+  version: number,
+  values: Partial<Omit<typeof returnsTable.$inferInsert, "id" | "version">>,
+) => updateWithVersion(db, returnsTable, { id, version }, values);
+
+/** Notes that the books are back on the shelf, once */
+export const markRestocked = (db: Db, id: string, now: Date) =>
+  db
+    .update(returnsTable)
+    .set({ restockedAt: now })
+    .where(and(eq(returnsTable.id, id), isNull(returnsTable.restockedAt)));

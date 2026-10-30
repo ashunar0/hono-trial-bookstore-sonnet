@@ -1,3 +1,7 @@
 # Friction
 
 - 場所: 見積もり（カート）。何が: 設計書の依存表は「cart → book・pricing」だが、domains.md の「読みだけの合成は route」に従うと cart ドメインは pricing を一度も呼ばず、cart/_read.ts（route 側）が cart・book・coupon・pricing を全部つなぐ。どうしたくなったか: 見積もりを `cart/usecases/` か `queries` に置いて cart が pricing を読む形にしたかった（usecase は書き込み用なので置けず、queries は他ドメインの index を読めない）。決まりの中で route の _read.ts に置いた
+- 場所: 返品の route（POST /orders/[id]/returns と /returns 以下）。何が: 返品は order ドメインの 1 つの言葉だが、URL の都合で orders と returns の 2 つのリソースに分かれた。route は他のリソースの _response.ts しか読めないので、返品を作る読み（返品＋行）が orders/_read.ts と returns/_read.ts に二重にできた（返品の形を作る関数だけ orders/_response.ts に置いて両方から使った）。どうしたくなったか: 返品の読みを 1 か所に置いて両リソースから使いたかった
+- 場所: 注文の確定／キャンセル／返品の受け取りの「手順」。何が: domains.md は usecase どうしの呼び合いを禁じているので、placeOrder と cancelOrder が共有する「戻す段」は usecases/_giveBack.ts に出した。ここまでは決まりどおりで書きやすい。ただ、返金の記録（refunds の INSERT）を「切り替えに勝ったときだけ」にしたいが batch では分岐できず、結局「戻す段の先頭で固定 id の INSERT を2回目は無視」に寄せた。どうしたくなったか: 切り替え（version）と返金の記録を1回の batch に入れて、切り替えに負けたら返金も消えるようにしたかった（updateWithVersion の結果を batch の中の次の文が条件に使えない）
+- 場所: 在庫・クーポンの「条件つき INSERT の成否」。何が: 返品の冊数上限のように「読んでから書く」では同時に走ると両方通る確認が、DB の制約にできない（足し合わせの上限は CHECK にできない）。書いたあとに数え直して取り下げる形にした。どうしたくなったか: 「返品済みの冊数」を行の列に持って CHECK (returned <= quantity) にして、足し引きの文 ＋ CHECK の型にそろえたかった（表の持ち主は order で、設計書の表には無い列）
+- 場所: 見積もり（前のコミットに記載）と、cron の import。何が: cron（src/crons）は「anything else」の種類で、ドメインの index と rules は読めるので、order の queries（findExpiredPayments など）を index から出して読ませる形になった。cron が読む queries を index に並べるのが少し多い。どうしたくなったか: 特に無し（決まりの中で書けた）

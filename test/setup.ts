@@ -52,3 +52,29 @@ export const placeOrder = async (user: SessionUser, couponCode?: string, at = NO
   const res = await request(user, "POST", "/orders", { couponCode }, at);
   return { res, order: (await res.clone().json()) as Order };
 };
+
+export const SHIPPED_AT = new Date("2026-11-11T01:00:00Z");
+
+/** Pays and ships an order; returns it as the API shows it after shipping */
+export const payAndShip = async (user: SessionUser, id: string) => {
+  await request(user, "POST", `/orders/${id}/pay`, undefined, NOW);
+  const res = await request(staff, "POST", `/orders/${id}/ship`, undefined, SHIPPED_AT);
+  return (await res.json()) as Order;
+};
+
+export type Return = {
+  id: string;
+  status: string;
+  lines: { orderLineId: string; quantity: number }[];
+  [key: string]: unknown;
+};
+
+export const requestReturn = async (
+  user: SessionUser,
+  orderId: string,
+  lines: { orderLineId: string; quantity: number }[],
+  at = new Date("2026-11-12T00:00:00Z"),
+) => {
+  const res = await request(user, "POST", `/orders/${orderId}/returns`, { lines }, at);
+  return { res, ret: (await res.clone().json()) as Return };
+};

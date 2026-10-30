@@ -9,7 +9,7 @@ import {
   returnsTable,
 } from "#/db/schema";
 import { olderThan } from "#/lib/page";
-import type { OrderStatus } from "./rules";
+import type { OrderStatus, ReturnStatus } from "./rules";
 
 export type OrderRow = typeof ordersTable.$inferSelect;
 export type OrderLineRow = typeof orderLinesTable.$inferSelect;
@@ -97,4 +97,46 @@ export const findUnrestoredCancels = async (db: Db, limit: number) =>
     .from(ordersTable)
     .where(and(eq(ordersTable.status, "cancelled"), isNull(ordersTable.restoredAt)))
     .orderBy(ordersTable.cancelledAt)
+    .limit(limit);
+
+export const findReturn = async (db: Db, id: string) => {
+  const [row] = await db.select().from(returnsTable).where(eq(returnsTable.id, id)).limit(1);
+  return row;
+};
+
+/** Newest request first */
+export const listReturns = async (db: Db, filter: { status?: ReturnStatus }, page: PageQuery) => {
+  const rows = await db
+    .select()
+    .from(returnsTable)
+    .where(
+      and(
+        filter.status === undefined ? undefined : eq(returnsTable.status, filter.status),
+        olderThan(returnsTable.requestedAt, returnsTable.id, page.after),
+      ),
+    )
+    .orderBy(desc(returnsTable.requestedAt), desc(returnsTable.id))
+    .limit(page.limit + 1);
+  return toPage(rows, page.limit, (r) => ({ at: r.requestedAt, id: r.id }));
+};
+
+/** How many books of each order line are in returns of these statuses, summed over the order's returns */
+export const countReturnedBooks = async (db: Db, orderId: string, statuses: ReturnStatus[]) => {
+  const rows = await db
+    .select({ orderLineId: returnLinesTable.orderLineId, quantity: returnLinesTable.quantity })
+    .from(returnLinesTable)
+    .innerJoin(returnsTable, eq(returnsTable.id, returnLinesTable.returnId))
+    .where(and(eq(returnsTable.orderId, orderId), inArray(returnsTable.status, statuses)));
+  const counts = new Map<string, number>();
+  for (const r of rows) counts.set(r.orderLineId, (counts.get(r.orderLineId) ?? 0) + r.quantity);
+  return counts;
+};
+
+/** Completed returns whose books are not yet back on the shelf (cron finishes them) */
+export const findUnrestockedReturns = (db: Db, limit: number) =>
+  db
+    .select({ id: returnsTable.id, version: returnsTable.version })
+    .from(returnsTable)
+    .where(and(eq(returnsTable.status, "completed"), isNull(returnsTable.restockedAt)))
+    .orderBy(returnsTable.completedAt)
     .limit(limit);

@@ -79,3 +79,82 @@ export const canCancel = (status: OrderStatus, caller: Caller): boolean =>
 
 /** Whether the payment deadline has passed: paying at the very moment it is due still works */
 export const paymentDeadlinePassed = (dueAt: Date, now: Date): boolean => now > dueAt;
+
+// ── returns ───────────────────────────────────────────────────────────────
+
+export const RETURN_STATUSES = ["requested", "completed", "rejected"] as const;
+export type ReturnStatus = (typeof RETURN_STATUSES)[number];
+
+export const ReturnPeriodEnded = {
+  code: "RETURN_PERIOD_ENDED",
+  kind: "unprocessable",
+  message: "The return period has ended",
+} as const;
+
+export const ReturnQuantityExceeded = {
+  code: "RETURN_QUANTITY_EXCEEDED",
+  kind: "conflict",
+  message: "More books than can still be returned",
+  details: z.object({
+    lines: z.array(z.object({ orderLineId: z.string(), returnable: z.number() })),
+  }),
+} as const;
+
+export const ReturnStatusConflict = {
+  code: "RETURN_STATUS_CONFLICT",
+  kind: "conflict",
+  message: "The return is not waiting to be received or rejected",
+  details: z.object({ status: z.enum(RETURN_STATUSES) }),
+} as const;
+
+/** What the customer sends to return books: which lines, how many of each (a line once) */
+export const returnInputSchema = z
+  .object({
+    lines: z
+      .array(z.object({ orderLineId: z.string(), quantity: z.number().int().positive() }))
+      .min(1),
+  })
+  .refine((v) => new Set(v.lines.map((l) => l.orderLineId)).size === v.lines.length, {
+    message: "A line may appear once",
+    path: ["lines"],
+  });
+
+export const rejectInputSchema = z.object({ reason: z.string().min(1) });
+
+/** A return is accepted until 14 days after shipping; the very moment it ends is still in */
+export const returnPeriodEnded = (shippedAt: Date, now: Date): boolean =>
+  now.getTime() > shippedAt.getTime() + RETURN_DAYS * DAY;
+
+type SoldLine = { id: string; unitPrice: number; quantity: number; discount: number };
+
+/**
+ * How many of each line can still be returned: what was shipped minus what is requested or completed
+ * (rejected ones are not counted by the caller)
+ */
+export const returnableOf = (
+  lines: { id: string; quantity: number }[],
+  taken: Map<string, number>,
+) => lines.map((l) => ({ orderLineId: l.id, returnable: l.quantity - (taken.get(l.id) ?? 0) }));
+
+/**
+ * What is paid back for returning `count` books of a line that already had `alreadyReturned` come back:
+ * the price minus the discount allotted. The discount per book is rounded down, and the book that makes
+ * the line complete carries what is left, so returning all of a line gives back exactly what was paid
+ */
+export const refundOfLine = (line: SoldLine, count: number, alreadyReturned: number): number => {
+  const perBook = Math.floor(line.discount / line.quantity);
+  const completes = alreadyReturned + count === line.quantity;
+  const discount = perBook * count + (completes ? line.discount - perBook * line.quantity : 0);
+  return line.unitPrice * count - discount;
+};
+
+/** The refund of a return: the sum over its lines, and the tax inside it (amount x 10/110, rounded down) */
+export const refundOfReturn = (
+  returned: { line: SoldLine; count: number; alreadyReturned: number }[],
+): { amount: number; tax: number } => {
+  const amount = returned.reduce(
+    (sum, r) => sum + refundOfLine(r.line, r.count, r.alreadyReturned),
+    0,
+  );
+  return { amount, tax: Math.floor((amount * 10) / 110) };
+};

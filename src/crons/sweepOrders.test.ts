@@ -4,7 +4,7 @@ import { expect, it } from "vitest";
 import { ordersTable, refundsTable } from "#/db/schema";
 import { reserveStock } from "#/domains/inventory/index";
 import { makeDeps } from "#/main";
-import { db, request, someone, staff } from "../../test/fixtures";
+import { db, request, someone } from "../../test/fixtures";
 import { addToCart, newBook, newCoupon, NOW, placeOrder, stockOf } from "../../test/setup";
 import { cron } from "./sweepOrders";
 
