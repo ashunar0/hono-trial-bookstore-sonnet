@@ -31,3 +31,9 @@ QUESTION: 支払い期限は確定中に作る注文の時点（now + 3 日）�
 QUESTION: 注文の一覧の ?status= に placing を許すか → 確定中は誰にも見せないので受けない（400）
 QUESTION: 確定の「4. 支払い待ちにする（version で見る）」→ 注文は version 1 で作り、切り替えは updateWithVersion(version 1)。cron に先にキャンセルされていれば行が返らず、押さえ・使用を自分で戻して ORDER_STATUS_CONFLICT（details.status は読み直した今の状態）
 QUESTION: 在庫の押さえ・クーポンの使用を呼ぶ順 → 設計書の確定の段の順（在庫→クーポン）どおり。確認の順（COUPON_NOT_APPLICABLE→OUT_OF_STOCK→COUPON_ALREADY_USED）と同じ
+QUESTION: PAYMENT_DEADLINE_PASSED と ORDER_STATUS_CONFLICT の順 → 確認の順の決まり（422→409）より先に「支払い待ちか」を見る。期限は支払い待ちの注文にだけ意味があるので、支払い済み・キャンセル済みは期限を過ぎていても 409。支払い待ちで期限を過ぎていれば 422。期限ちょうど（now == 期限）は払える
+QUESTION: キャンセルの返金の置き場所 → 設計書は「合計を全額返す」だけ。refunds に返品 id 空の行を 1 つ入れる。切り替え（version）の成功を見てから書く必要があり、batch では分岐できないので、戻す段（giveBack）の先頭で入れる（id は refund-<注文 id> 固定で2回目は何もしない）。落ちても cron が戻す段から呼び直すので返金が漏れない
+QUESTION: 他人の注文をキャンセル・支払おうとしたら → 404（客から他人の注文は 404 に見える）。確定中の注文も 404
+QUESTION: キャンセルで version が合わないとき → ORDER_STATUS_CONFLICT（details.status は読み直した今の状態）。客が送る version はキャンセルだけ（設計書どおり）
+QUESTION: 発送済みの注文を店の人がキャンセルしようとしたら → 409（発送前だけ）
+QUESTION: 注文の行・カートの並びを何で決めるか → 割り振りの端数を受ける「最後の行」を決めるため、カートに入れた順（rowid）を注文の行の順にした

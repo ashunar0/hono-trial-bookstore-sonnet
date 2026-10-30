@@ -7,7 +7,7 @@ import { crons, registerRoutes } from "./routes.gen";
 /** What handlers, middleware and jobs read in c.var.deps. Built per request; tests swap parts of it */
 export const makeDeps = (env: Env) => {
   const db = wireDb(env.DB);
-  const auth = makeAuth(db, env.BETTER_AUTH_SECRET);
+  const auth = makeAuth(db, env.BETTER_AUTH_SECRET, env.BETTER_AUTH_URL);
   return { db, auth, sessionUser: sessionUserOf(auth) };
 };
 

@@ -78,6 +78,7 @@ export const placeOrder = async (
     reservationId: crypto.randomUUID(),
     paymentDueAt: paymentDueAt(now),
     createdAt: now,
+    paidAt: null,
     version: 1,
   };
   const discounts = allocateDiscount(

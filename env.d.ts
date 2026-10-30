@@ -12,6 +12,8 @@ declare global {
     DB: D1Database;
     /** Better Auth's signing secret. wrangler.jsonc vars for local; a secret in production */
     BETTER_AUTH_SECRET: string;
+    /** Where the API is served, for Better Auth's links and cookies */
+    BETTER_AUTH_URL: string;
   }
 }
 

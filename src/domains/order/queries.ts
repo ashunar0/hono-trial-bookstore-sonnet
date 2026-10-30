@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull, lt, ne } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, lt, ne, sql } from "drizzle-orm";
 import { toPage, type PageQuery } from "hono-kit/page";
 import type { Db } from "#/db/index";
 import {
@@ -26,7 +26,8 @@ export const findOrderLines = (db: Db, orderIds: string[]) =>
         .select()
         .from(orderLinesTable)
         .where(inArray(orderLinesTable.orderId, orderIds))
-        .orderBy(orderLinesTable.id);
+        // in the order they were written: the order of the cart
+        .orderBy(sql`rowid`);
 
 /** Newest first. A placing order is never listed. customerId limits to one customer's */
 export const listOrders = async (

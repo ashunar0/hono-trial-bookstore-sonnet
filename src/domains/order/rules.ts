@@ -68,3 +68,14 @@ export const canSeeOrder = (
   order: { customerId: string; status: OrderStatus },
   user: { id: string; role: "customer" | "staff" },
 ): boolean => order.status !== "placing" && (user.role === "staff" || order.customerId === user.id);
+
+export type Caller = { kind: "customer"; id: string } | { kind: "staff" } | { kind: "cron" };
+
+/** Which states an order can be cancelled from, by who asks. Only cron sees (and cancels) a placing order */
+export const canCancel = (status: OrderStatus, caller: Caller): boolean =>
+  status === "awaiting_payment" ||
+  status === "paid" ||
+  (status === "placing" && caller.kind === "cron");
+
+/** Whether the payment deadline has passed: paying at the very moment it is due still works */
+export const paymentDeadlinePassed = (dueAt: Date, now: Date): boolean => now > dueAt;

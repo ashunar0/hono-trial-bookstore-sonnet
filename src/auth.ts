@@ -16,9 +16,10 @@ import { accountsTable, sessionsTable, usersTable, verificationsTable } from "./
 export type Role = "customer" | "staff";
 
 /** Better Auth (email and password). The role is the app's own column: input false, so no request can set it */
-export const makeAuth = (db: Db, secret: string) =>
+export const makeAuth = (db: Db, secret: string, baseURL: string) =>
   betterAuth({
     secret,
+    baseURL,
     basePath: "/api/auth",
     database: drizzleAdapter(db, {
       provider: "sqlite",

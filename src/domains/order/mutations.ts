@@ -1,7 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { updateWithVersion } from "hono-kit/sqlite";
 import type { Db } from "#/db/index";
-import { orderLinesTable, ordersTable } from "#/db/schema";
+import { orderLinesTable, ordersTable, refundsTable } from "#/db/schema";
 
 type NewOrder = typeof ordersTable.$inferInsert;
 type NewLine = typeof orderLinesTable.$inferInsert;
@@ -29,3 +29,7 @@ export const deleteOrder = (db: Db, id: string) =>
 
 export const deleteOrderLines = (db: Db, orderId: string) =>
   db.delete(orderLinesTable).where(eq(orderLinesTable.orderId, orderId));
+
+/** Records a refund. A refund with this id already there (the step ran before) is left as it is */
+export const insertRefund = (db: Db, refund: typeof refundsTable.$inferInsert) =>
+  db.insert(refundsTable).values(refund).onConflictDoNothing();

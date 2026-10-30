@@ -9,7 +9,7 @@ const post = (path: string, body: unknown, cookie?: string) =>
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Origin: "http://localhost",
+        Origin: "http://localhost:8787",
         ...(cookie ? { Cookie: cookie } : {}),
       },
       body: JSON.stringify(body),
